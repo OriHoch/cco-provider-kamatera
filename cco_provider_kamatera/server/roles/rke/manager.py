@@ -52,3 +52,5 @@ def initialize(server, role):
     sshdconfig = ssh(server, ["cat", "/etc/ssh/sshd_config"], method="check_output").decode()
     if 'cco-provider-kamatera managed config' not in sshdconfig:
         ssh(server, [f'echo "{SSHD_CONFIG}" > /etc/ssh/sshd_config'])
+    ssh(server, ["chmod +x /usr/local/lib/cco/rancher_install_docker.sh &&"
+                 " if ! which docker; then /usr/local/lib/cco/rancher_install_docker.sh; fi"])

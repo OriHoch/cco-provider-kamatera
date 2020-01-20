@@ -71,7 +71,7 @@ def set_ssh_key(server):
         helpers.ssh(server, ["echo successfull ssh connection using key"])
 
 
-def create_cluster_servers(cluster):
+def create_cluster_servers(cluster, skip_server_init=False):
     cluster_id = cluster['id']
     cluster_servers_path = get_cluster_servers_path(cluster_id)
     if not os.path.exists(cluster_servers_path):
@@ -90,6 +90,8 @@ def create_cluster_servers(cluster):
         server_password, server['passwordfile'] = get_server_password(cluster_id, server_name)
         server_info = kamatera_manager.server_info(server_name)
         if not server_info:
+            if skip_server_init:
+                raise Exception()
             kamatera_manager.create_server(server, server_password)
             server_info = kamatera_manager.server_info(server_name)
         assert len(server_info) == 1
@@ -106,5 +108,6 @@ def create_cluster_servers(cluster):
                 assert server['private_ip'] is None
                 server['private_ip'] = network['ips'][0]
         servers.append(server)
-        initialize(server, create=True)
+        if not skip_server_init:
+            initialize(server, create=True)
     return servers
