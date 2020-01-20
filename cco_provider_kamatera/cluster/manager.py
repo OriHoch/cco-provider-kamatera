@@ -54,18 +54,12 @@ def create(values_yaml):
 
 def initialize(cluster_id, skip_server_init=False, dry_run=False):
     cluster = get_cluster(cluster_id)
-    cluster['servers'] = server_manager.create_cluster_servers(cluster)
+    cluster['servers'] = server_manager.create_cluster_servers(cluster, skip_server_init)
     save_cluster(cluster)
     has_rke_nodes = False
     for server in cluster['servers']:
         if server.get('disabled'):
             continue
-        server_name = server['name']
-        if not skip_server_init:
-            if dry_run:
-                logs.info('skipping server_manage.initialize', cluster_id=cluster_id, server_name=server_name)
-            else:
-                server_manager.initialize(server)
         if 'rke-node' in server['roles']:
             has_rke_nodes = True
     if has_rke_nodes:
@@ -93,6 +87,9 @@ def initialize(cluster_id, skip_server_init=False, dry_run=False):
                     time.sleep(60)
                 else:
                     break
+        subprocess.check_call(['kubectl',
+                               '--kubeconfig', f'{get_cluster_path(cluster_id)}/kube_config_rke-cluster.yml',
+                               'get', 'nodes'])
 
 
 def get_rke_cluster_config(cluster):
