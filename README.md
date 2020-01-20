@@ -4,7 +4,7 @@ ckan-cloud-operator custom provider for Kamatera
 
 Check [ckan-cloud-operator docs](https://github.com/datopian/ckan-cloud-operator/blob/master/README.md) for details.
 
-## Create the custom provider values file:
+## Create the custom provider interactive.yml:
 
 ```
 kamatera:
@@ -42,7 +42,7 @@ kamatera:
           role: ["worker"]
 ```
 
-Save it under `.cco/interactive.yaml` (so it is available inside the ckan-cloud-operator under /root)
+Save it under `.cco/interactive.yaml` (so it is available inside the ckan-cloud-operator under `/root/interactive.yaml`)
 
 Start a Bash shell inside the ckan-cloud-operator Docker image (see the docs)
 
