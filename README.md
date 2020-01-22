@@ -2,9 +2,17 @@
 
 ckan-cloud-operator custom provider for Kamatera
 
-Check [ckan-cloud-operator docs](https://github.com/datopian/ckan-cloud-operator/blob/master/README.md) for details.
+See [ckan-cloud-operator docs](https://github.com/datopian/ckan-cloud-operator/blob/master/README.md) for more details.
 
-## Create the custom provider interactive.yml:
+## Creating a cluster
+
+Create a directory to hold cluster values and secrets under current working directory:
+
+```
+mkdir .cco
+```
+
+Create the following file at `.cco/interactive.yaml`
 
 ```
 kamatera:
@@ -40,14 +48,57 @@ kamatera:
         roles: ["rke-node"]
         rke-node:
           role: ["worker"]
+default:
+  config:
+    cluster-init:
+      ckan-cloud-operator-image: orihoch/ckan-cloud-operator:kamatera-latest
+      components:
+        - labels
+        - cluster
+        - crds
 ```
 
-Save it under `.cco/interactive.yaml` (so it is available inside the ckan-cloud-operator under `/root/interactive.yaml`)
+Start the working environment
 
-Start a Bash shell inside the ckan-cloud-operator Docker image (see the docs)
+```
+docker run -it -v $PWD/.cco:/root/ orihoch/ckan-cloud-operator:kamatera-latest
+```
 
-Run the following inside this Bash shell:
+This starts a Bash shell where you can run ckan cloud operator commands
 
+Create the cluster:
+ 
 ```
 cco-provider-kamatera cluster create
+```
+
+You can run this command multiple times in case of failures.
+
+Once it's done, edit `interactive.yaml` and remove the cluster key
+
+All the cluster settings now reside in `.cco/cluster-MYCLUSTER/cluster.json`
+
+Connect to the Kubernetes cluster (from inside the cco working environment):
+
+```
+export KUBECONFIG=$HOME/cluster-MYCLUSTER/kube_config_rke-cluster.yml
+kubectl get nodes
+```
+
+list servers:
+
+```
+cco-provider-kamatera server list
+```
+
+ssh to a server:
+
+```
+cco-provider-kamatera server ssh node-1
+```
+
+## Initializing ckan-cloud-operator
+
+```
+CCO_INTERACTIVE_CI=$HOME/interactive.yaml ckan-cloud-operator cluster initialize --cluster-provider=custom-kamatera 
 ```

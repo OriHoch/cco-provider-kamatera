@@ -16,7 +16,10 @@ def get_cluster_path(cluster_id):
     return os.path.expanduser(f'~/cluster-{cluster_id}')
 
 
-def get_cluster(cluster_id):
+def get_cluster(cluster_id=None):
+    if not cluster_id:
+        with open(os.environ.get('KUBECONFIG')) as f:
+            cluster_id = yaml.safe_load(f)['current-context']
     cluster_path = get_cluster_path(cluster_id)
     with open(f'{cluster_path}/cluster.json') as f:
         return json.load(f)
