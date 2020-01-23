@@ -21,3 +21,15 @@ def create(values_yaml):
 @click.option('--dry-run', is_flag=True)
 def initialize(cluster_id, skip_server_init, dry_run):
     manager.initialize(cluster_id, skip_server_init, dry_run)
+
+
+@cluster.command()
+@click.argument('CLUSTER_ID')
+def persist(cluster_id):
+    manager.persist(cluster_id)
+
+
+@cluster.command()
+@click.argument('CLUSTER_ID')
+def load(cluster_id):
+    manager.load(cluster_id)

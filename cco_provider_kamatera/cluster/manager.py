@@ -6,6 +6,8 @@ from ..server import manager as server_manager
 from ckan_cloud_operator import logs
 import subprocess
 import time
+from ckan_cloud_operator.crds import manager as crds_manager
+from ckan_cloud_operator import kubectl
 
 
 # rke config --list-version --all
@@ -111,3 +113,69 @@ def get_rke_cluster_config(cluster):
         'kubernetes_version': KUBERNETES_VERSION,
         'nodes': nodes,
     }
+
+
+def persist(cluster_id):
+    cluster = get_cluster(cluster_id)
+    cluster_secrets = {
+        'servers': {}
+    }
+    for server in cluster['servers']:
+        cluster_secrets['servers'][server['name']] = server_secrets = {}
+        with open(server['passwordfile']) as f:
+            server_secrets['password'] = f.read()
+        with open(server['keyfile']) as f:
+            server_secrets['private_key'] = f.read()
+        with open(server['keyfile'] + '.pub') as f:
+            server_secrets['public_key'] = f.read()
+    crds_manager.install_crd('kamateracluster', 'kamateraclusters', 'KamateraCluster')
+    crds_manager.install_crd('kamateraserver', 'kamateraservers', 'KamateraServer')
+    kubectl.apply(crds_manager.get_resource(
+        'kamateracluster',
+        cluster['id'],
+        spec={**{k: v for k, v in cluster.items() if k != 'servers'},
+              'server_names': [server['name'] for server in cluster['servers']]}
+    ))
+    for server in cluster['servers']:
+        kubectl.apply(crds_manager.get_resource(
+            'kamateraserver',
+            f'{server["name"]}',
+            spec=server
+        ))
+        crds_manager.config_set('kamateraserver', server["name"],
+                                values=cluster_secrets['servers'][server['name']], is_secret=True)
+    with open(f'{get_cluster_path(cluster_id)}/kube_config_rke-cluster.yml') as f:
+        crds_manager.config_set('kamateracluster', cluster_id,
+                                values={'kube_config_rke-cluster.yml': f.read()}, is_secret=True)
+
+
+def load(cluster_id):
+    cluster = crds_manager.get('kamateracluster',
+                               crds_manager.get_resource_name('kamateracluster', cluster_id))['spec']
+    cluster['servers'] = []
+    servers_path = os.path.expanduser(f'~/cluster-{cluster_id}-servers')
+    os.makedirs(servers_path, exist_ok=True)
+    for server_name in cluster['server_names']:
+        server = crds_manager.get('kamateraserver',
+                                  crds_manager.get_resource_name('kamateraserver', server_name))['spec']
+        server_secrets = crds_manager.config_get('kamateraserver', server_name, is_secret=True)
+        password_filename = f'{servers_path}/server_{server_name}_password.txt'
+        private_key_filename = f'{servers_path}/server_{server_name}_id_rsa'
+        public_key_filename = private_key_filename + '.pub'
+        with open(password_filename, 'w') as f:
+            f.write(server_secrets['password'])
+        with open(private_key_filename, 'w') as f:
+            f.write(server_secrets['private_key'])
+        with open(public_key_filename, 'w') as f:
+            f.write(server_secrets['public_key'])
+        server['passwordfile'] = password_filename
+        server['keyfile'] = private_key_filename
+        cluster['servers'].append(server)
+    del cluster['server_names']
+    cluster_path = get_cluster_path(cluster_id)
+    os.makedirs(cluster_path, exist_ok=True)
+    with open(f'{cluster_path}/cluster.json', 'w') as f:
+        yaml.safe_dump(cluster, f)
+    cluster_secrets = crds_manager.config_get('kamateracluster', cluster_id, is_secret=True)
+    with open(f'{cluster_path}/kube_config_rke-cluster.yml', 'w') as f:
+        f.write(cluster_secrets['kube_config_rke-cluster.yml'])
