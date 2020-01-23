@@ -175,7 +175,7 @@ def load(cluster_id):
     cluster_path = get_cluster_path(cluster_id)
     os.makedirs(cluster_path, exist_ok=True)
     with open(f'{cluster_path}/cluster.json', 'w') as f:
-        yaml.safe_dump(cluster, f)
+        json.dump(cluster, f)
     cluster_secrets = crds_manager.config_get('kamateracluster', cluster_id, is_secret=True)
     with open(f'{cluster_path}/kube_config_rke-cluster.yml', 'w') as f:
         f.write(cluster_secrets['kube_config_rke-cluster.yml'])
