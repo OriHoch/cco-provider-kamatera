@@ -7,7 +7,8 @@ cloudcli --api-clientid _ --api-secret _ --api-server https://cloudcli.cloudwm.c
 echo Install cco-provider-kamatera &&\
 pip install -e /usr/local/lib/cco/${K8_PROVIDER} &&\
 echo Install additional packages &&\
-apt-get update && apt-get install -y ssh-tools sshpass &&\
+apt-get update && apt-get install -y sshpass &&\
+( apt-get install -y ssh-tools || apt-get install -y openssh-client ) &&\
 echo Install RKE &&\
 curl -Lo /usr/local/bin/rke https://github.com/rancher/rke/releases/download/${RKE_VERSION}/rke_linux-amd64 &&\
 chmod +x /usr/local/bin/rke &&\
